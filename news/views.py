@@ -10,8 +10,10 @@ from .models import Comment, News
 
 class NewsList(generic.ListView):
     """Список новостей."""
+
     model = News
     template_name = 'news/home.html'
+    context_object_name = 'news_feed'
 
     def get_queryset(self):
         """
@@ -19,9 +21,9 @@ class NewsList(generic.ListView):
 
         Их количество определяется в настройках проекта.
         """
-        return self.model.objects.prefetch_related(
-            'comment_set'
-        )[:settings.NEWS_COUNT_ON_HOME_PAGE]
+        return self.model.objects.prefetch_related('comment_set')[
+            : settings.NEWS_COUNT_ON_HOME_PAGE
+        ]
 
 
 class NewsDetail(generic.DetailView):
@@ -31,7 +33,7 @@ class NewsDetail(generic.DetailView):
     def get_object(self, queryset=None):
         obj = get_object_or_404(
             self.model.objects.prefetch_related('comment_set__author'),
-            pk=self.kwargs['pk']
+            pk=self.kwargs['pk'],
         )
         return obj
 
@@ -43,9 +45,7 @@ class NewsDetail(generic.DetailView):
 
 
 class NewsComment(
-        LoginRequiredMixin,
-        generic.detail.SingleObjectMixin,
-        generic.FormView
+    LoginRequiredMixin, generic.detail.SingleObjectMixin, generic.FormView
 ):
     model = News
     form_class = CommentForm
@@ -80,13 +80,15 @@ class NewsDetailView(generic.View):
 
 class CommentBase(LoginRequiredMixin):
     """Базовый класс для работы с комментариями."""
+
     model = Comment
 
     def get_success_url(self):
         comment = self.get_object()
-        return reverse(
-            'news:detail', kwargs={'pk': comment.news.pk}
-        ) + '#comments'
+        return (
+            reverse('news:detail', kwargs={'pk': comment.news.pk})
+            + '#comments'
+        )
 
     def get_queryset(self):
         """Пользователь может работать только со своими комментариями."""
@@ -95,10 +97,12 @@ class CommentBase(LoginRequiredMixin):
 
 class CommentUpdate(CommentBase, generic.UpdateView):
     """Редактирование комментария."""
+
     template_name = 'news/edit.html'
     form_class = CommentForm
 
 
 class CommentDelete(CommentBase, generic.DeleteView):
     """Удаление комментария."""
+
     template_name = 'news/delete.html'
